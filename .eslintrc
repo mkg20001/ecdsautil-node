@@ -1,0 +1,27 @@
+{
+  "parserOptions": {
+    "sourceType": "module"
+  },
+  "env": {
+    "es2021": true
+  },
+  "rules": {
+    "node/no-unsupported-features/es-syntax": "off",
+    "unicorn/import-index": "off",
+    "unicorn/prefer-node-protocol": "off",
+    "no-await-in-loop": "off"
+  },
+  "extends": [
+    "ipfs/js"
+  ],
+  "overrides": [
+    {
+      "files": [
+        "test/**/*.js"
+      ],
+      "env": {
+        "mocha": true
+      }
+    }
+  ]
+}

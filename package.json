@@ -1,0 +1,41 @@
+{
+  "name": "ecdsautil-node",
+  "version": "0.0.1",
+  "description": "ECDSAUtil bindings for node",
+  "main": "index.js",
+  "scripts": {
+    "test": "mocha -A",
+    "install": "node-gyp rebuild",
+    "cov": "nyc mocha",
+    "lint": "eslint .",
+    "fix": "eslint --fix ."
+  },
+  "template": {
+    "extends": [
+      "nodeEslintESM"
+    ]
+  },
+  "keywords": [
+    "ecdsautil",
+    "binding"
+  ],
+  "author": "Maciej Krüger <mkg20001@gmail.com>",
+  "license": "MPL-2.0",
+  "gypfile": true,
+  "dependencies": {
+    "mkgs-tool": "^0.1.27",
+    "node-addon-api": "^5.0.0",
+    "node-gyp": "^9.0.0"
+  },
+  "devDependencies": {
+    "eslint": "*",
+    "eslint-config-ipfs": "*",
+    "eslint-config-oclif": "*",
+    "mocha": "*",
+    "nyc": "*"
+  },
+  "engines": {
+    "node": ">=16"
+  },
+  "type": "module"
+}
