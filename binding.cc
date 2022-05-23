@@ -1,14 +1,16 @@
+#include <ios>
+#include <sstream>
 #include "binding.h"
 
 using namespace Napi;
 
 char * ecdsa_sign(const char * privkey, const char * msg) {
-  char * keydata;
-  std::istringstream(privkey) >> std::hex >> keydata;
+  ecc_int256_t keydata;
+  std::istringstream(privkey) >> std::hex >> keydata.p;
 
   ecc_25519_work_t key;
 
-  ecc_25519_load_packed_legacy(&key, keydata);
+  ecc_25519_load_packed_legacy(&key, &keydata);
   if (!ecdsa_is_valid_pubkey(&key))
     goto fail;
 
@@ -22,18 +24,18 @@ char * ecdsa_sign(const char * privkey, const char * msg) {
 
   ecdsa_signature_t signature;
 
-  if (!ecdsa_sign_legacy(&signature, &hash, &key))
-    goto fail;
+  ecdsa_sign_legacy(&signature, &hash, &keydata);
 
-  std::stringstream ss;
+  char * sig;
+  std::ostringstream(sig) << std::hex << signature.r.p << signature.s.p;
 
-  sig << std::hex << signature.r.p << signature.s.p;
+  return sig;
 
   fail:
-    return NULL;
+    return nullptr;
 }
 
-Napi::Value Sign() {
+Napi::Value Sign(const Napi::CallbackInfo& info) {
   Napi::Env env = info.Env();
 
   if (info.Length() < 2) {
@@ -48,7 +50,7 @@ Napi::Value Sign() {
   }
 
   char * res;
-  res = ecdsa_sign(info[0].As<Napi::String>().c_str(), info[1].As<Napi::String>().c_str());
+  res = ecdsa_sign(info[0].As<Napi::String>().Utf8Value().c_str(), info[1].As<Napi::String>().Utf8Value().c_str());
 
   if (!res) {
     Napi::Error::New(env, "Signing failed").ThrowAsJavaScriptException();
