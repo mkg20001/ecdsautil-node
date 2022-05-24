@@ -36,5 +36,16 @@
   },
   "engines": {
     "node": ">=16"
-  }
+  },
+  "directories": {
+    "test": "test"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/mkg20001/ecdsautil-node.git"
+  },
+  "bugs": {
+    "url": "https://github.com/mkg20001/ecdsautil-node/issues"
+  },
+  "homepage": "https://github.com/mkg20001/ecdsautil-node#readme"
 }
