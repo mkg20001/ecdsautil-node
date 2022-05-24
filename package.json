@@ -1,6 +1,6 @@
 {
   "name": "ecdsautil-node",
-  "version": "0.0.1",
+  "version": "0.1.0",
   "description": "ECDSAUtil bindings for node",
   "main": "index.js",
   "scripts": {
