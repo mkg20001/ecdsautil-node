@@ -12,7 +12,7 @@
   },
   "template": {
     "extends": [
-      "nodeEslintESM"
+      "nodeEslint"
     ]
   },
   "keywords": [
@@ -36,6 +36,5 @@
   },
   "engines": {
     "node": ">=16"
-  },
-  "type": "module"
+  }
 }

@@ -1,37 +1,33 @@
 #include <ios>
-#include <sstream>
 #include "binding.h"
 
 using namespace Napi;
 
-char * ecdsa_sign(const char * privkey, const char * msg) {
-  ecc_int256_t keydata;
-  std::istringstream(privkey) >> std::hex >> keydata.p;
+unsigned char * ecdsa_sign(const unsigned char * privkey, const unsigned char * msg, size_t msg_length) {
+  unsigned char * out = static_cast<unsigned char *>(malloc(65));
 
-  ecc_25519_work_t key;
-
-  ecc_25519_load_packed_legacy(&key, &keydata);
-  if (!ecdsa_is_valid_pubkey(&key))
-    goto fail;
+  ecc_int256_t key_packed;
+  memcpy(key_packed.p, privkey, 32);
 
   ecc_int256_t hash;
 
   ecdsa_sha256_context_t hash_ctx;
   ecdsa_sha256_init(&hash_ctx);
-  ecdsa_sha256_update(&hash_ctx, msg, strlen(msg));
+  ecdsa_sha256_update(&hash_ctx, msg, msg_length);
 
   ecdsa_sha256_final(&hash_ctx, hash.p);
 
   ecdsa_signature_t signature;
 
-  ecdsa_sign_legacy(&signature, &hash, &keydata);
+  ecdsa_sign_legacy(&signature, &hash, &key_packed);
 
-  char * sig;
-  std::ostringstream(sig) << std::hex << signature.r.p << signature.s.p;
+  memcpy(out, signature.r.p, 32);
+  memcpy(out + 32, signature.s.p, 32);
 
-  return sig;
+  return out;
 
   fail:
+    free(out);
     return nullptr;
 }
 
@@ -39,30 +35,40 @@ Napi::Value Sign(const Napi::CallbackInfo& info) {
   Napi::Env env = info.Env();
 
   if (info.Length() < 2) {
-    Napi::TypeError::New(env, "Wrong number of arguments")
+    Napi::TypeError::New(env, "Wrong number of arguments. Must be 2.")
         .ThrowAsJavaScriptException();
     return env.Null();
   }
 
-  if (!info[0].IsNumber() || !info[1].IsNumber()) {
-    Napi::TypeError::New(env, "Wrong arguments").ThrowAsJavaScriptException();
+  if (!info[0].IsBuffer() || !info[1].IsBuffer()) {
+    Napi::TypeError::New(env, "Wrong arguments. Must be buffers.")
+        .ThrowAsJavaScriptException();
     return env.Null();
   }
 
-  char * res;
-  res = ecdsa_sign(info[0].As<Napi::String>().Utf8Value().c_str(), info[1].As<Napi::String>().Utf8Value().c_str());
+  if (info[0].As<Napi::Buffer<unsigned char>>().Length() != 32) {
+    Napi::TypeError::New(env, "Invalid privatekey length. Must be 32.")
+        .ThrowAsJavaScriptException();
+    return env.Null();
+  }
+
+  unsigned char * res;
+
+  res = ecdsa_sign(info[0].As<Napi::Buffer<unsigned char>>().Data(), info[1].As<Napi::Buffer<unsigned char>>().Data(), info[1].As<Napi::Buffer<char>>().Length());
 
   if (!res) {
     Napi::Error::New(env, "Signing failed").ThrowAsJavaScriptException();
     return env.Null();
   }
 
-  return Napi::String::New(env, res);
+  return Napi::Buffer<unsigned char>::Copy(env, res, 64);
 }
 
 Napi::Object Init(Napi::Env env, Napi::Object exports) {
   exports.Set(Napi::String::New(env, "sign"),
               Napi::Function::New(env, Sign));
+
+  return exports;
 }
 
 NODE_API_MODULE(ecdsautil, Init)
