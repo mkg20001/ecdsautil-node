@@ -3,34 +3,6 @@
 
 using namespace Napi;
 
-unsigned char * ecdsa_sign(const unsigned char * privkey, const unsigned char * msg, size_t msg_length) {
-  unsigned char * out = static_cast<unsigned char *>(malloc(65));
-
-  ecc_int256_t key_packed;
-  memcpy(key_packed.p, privkey, 32);
-
-  ecc_int256_t hash;
-
-  ecdsa_sha256_context_t hash_ctx;
-  ecdsa_sha256_init(&hash_ctx);
-  ecdsa_sha256_update(&hash_ctx, msg, msg_length);
-
-  ecdsa_sha256_final(&hash_ctx, hash.p);
-
-  ecdsa_signature_t signature;
-
-  ecdsa_sign_legacy(&signature, &hash, &key_packed);
-
-  memcpy(out, signature.r.p, 32);
-  memcpy(out + 32, signature.s.p, 32);
-
-  return out;
-
-  fail:
-    free(out);
-    return nullptr;
-}
-
 Napi::Value Sign(const Napi::CallbackInfo& info) {
   Napi::Env env = info.Env();
 
@@ -46,22 +18,36 @@ Napi::Value Sign(const Napi::CallbackInfo& info) {
     return env.Null();
   }
 
-  if (info[0].As<Napi::Buffer<unsigned char>>().Length() != 32) {
+  auto key = info[0].As<Napi::Buffer<unsigned char>>();
+  auto msg = info[1].As<Napi::Buffer<unsigned char>>();
+
+  if (key.Length() != 32) {
     Napi::TypeError::New(env, "Invalid privatekey length. Must be 32.")
         .ThrowAsJavaScriptException();
     return env.Null();
   }
 
-  unsigned char * res;
+  unsigned char * out = static_cast<unsigned char *>(malloc(64));
 
-  res = ecdsa_sign(info[0].As<Napi::Buffer<unsigned char>>().Data(), info[1].As<Napi::Buffer<unsigned char>>().Data(), info[1].As<Napi::Buffer<char>>().Length());
+  ecc_int256_t key_packed;
+  memcpy(key_packed.p, key.Data(), key.Length());
 
-  if (!res) {
-    Napi::Error::New(env, "Signing failed").ThrowAsJavaScriptException();
-    return env.Null();
-  }
+  ecc_int256_t hash;
 
-  return Napi::Buffer<unsigned char>::Copy(env, res, 64);
+  ecdsa_sha256_context_t hash_ctx;
+  ecdsa_sha256_init(&hash_ctx);
+  ecdsa_sha256_update(&hash_ctx, msg.Data(), msg.Length());
+
+  ecdsa_sha256_final(&hash_ctx, hash.p);
+
+  ecdsa_signature_t signature;
+
+  ecdsa_sign_legacy(&signature, &hash, &key_packed);
+
+  memcpy(out, signature.r.p, 32);
+  memcpy(out + 32, signature.s.p, 32);
+
+  return Napi::Buffer<unsigned char>::Copy(env, out, 64);
 }
 
 Napi::Object Init(Napi::Env env, Napi::Object exports) {
